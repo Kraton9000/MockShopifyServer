@@ -26,6 +26,11 @@ function addProductToList(list, title, product, onlyInStock) {
 
 }
 
+function updateCartTotal(cart, priceToAdd) {
+    var total = parseFloat(cart.total.substring(1)) 
+    cart.total = "$" + (total + priceToAdd).toFixed(2)
+}
+
 function findProductByTitle(title, substring, onlyInStock) {
     var productsFile = refreshFile(productsFileName)
     var foundProducts = {}
@@ -99,19 +104,37 @@ app.post('/addcart', (req, res) => {
     var cart = req.body.cart
     if (cart == null) {
         res.sendStatus(403)
+    } else if (cart.products[req.body.product] != null) {
+        res.sendStatus(400)
     } else {
-        var productToAdd = findProductByTitle(req.body.title, false, true)
+        var productToAdd = findProductByTitle(req.body.product, false, true)
         if (Object.keys(productToAdd).length < 1) {
             res.sendStatus(404)
         } else {
-            productToAdd = productToAdd[req.body.title]
-            cart.products[req.body.title] = productToAdd
+            productToAdd = productToAdd[req.body.product]
+            cart.products[req.body.product] = productToAdd
 
-            var total = parseFloat(cart.total.substring(1)) 
             var addedPrice = parseFloat(productToAdd.price.substring(1))
-            cart.total = "$" + (total + addedPrice).toFixed(2)
+            updateCartTotal(cart, addedPrice)
 
-            delete cart.products[req.body.title].inventoryCount
+            delete cart.products[req.body.product].inventoryCount
+            res.send(cart)
+        }
+    }
+})
+
+app.post('/removecart', (req, res) => {
+    var cart = req.body.cart
+    if (cart == null) {
+        res.sendStatus(403)
+    } else {
+        if (cart.products[req.body.product] == null) {
+            res.sendStatus(400)
+        } else {
+            var removedPrice = parseFloat(cart.products[req.body.product].price.substring(1)) * -1
+            updateCartTotal(cart, removedPrice)
+            
+            delete cart.products[req.body.product]
             res.send(cart)
         }
     }
@@ -142,7 +165,6 @@ app.post('/querybytitle', (req, res) => {
     var title = req.body.title
     var onlyInStock = req.body.onlyInStock
     if (title == null || onlyInStock == null) {
-        console.log(req.body)
         res.sendStatus(400)
     } else {
         res.send(findProductByTitle(title, true, onlyInStock))
