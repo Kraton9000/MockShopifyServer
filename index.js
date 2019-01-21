@@ -18,6 +18,14 @@ function refreshFile(fileName) {
 	return require(fileName)
 }
 
+function addProductToList(list, title, product, onlyInStock) {
+    if (!onlyInStock || product.inventoryCount > 0) {
+        list[title] = product
+    }
+    return list
+
+}
+
 function findProductByTitle(title, substring, onlyInStock) {
     var productsFile = refreshFile(productsFileName)
     var foundProducts = {}
@@ -27,12 +35,12 @@ function findProductByTitle(title, substring, onlyInStock) {
     if (substring) {
         for (var product in productsFile) {
             if (product.includes(title)) {
-                foundProducts[product] = productsFile[product]
+                addProductToList(foundProducts, product, productsFile[product], onlyInStock)
             }
         }
     } else {
         if (productsFile[title] != null) {
-            foundProducts[title] = productsFile[title]
+            addProductToList(foundProducts, title, productsFile[title], onlyInStock)
         }
     }
 
@@ -44,19 +52,21 @@ function findProductByPrice(priceQuery, threshold, onlyInStock) {
     var foundProducts = {}
 
     for (var product in productsFile) {
+        var price = parseFloat(productsFile[product].price.substring(1))
         if (threshold == 0) {
-            if (productsFile[product].price == priceQuery) {
-                foundProducts[product] = productsFile[product]
+            if (price == priceQuery) {
+                addProductToList(foundProducts, product, productsFile[product], onlyInStock)
             }
         } else if (threshold == 1) {
-            if (productsFile[product].price >= priceQuery) {
-                foundProducts[product] = productsFile[product]
+            if (price >= priceQuery) {
+                addProductToList(foundProducts, product, productsFile[product], onlyInStock)
             }
         } else if (threshold == 2) {
-            if (productsFile[product].price <= priceQuery) {
-                foundProducts[product] = productsFile[product]
+            if (price <= priceQuery) {
+                addProductToList(foundProducts, product, productsFile[product], onlyInStock)
             }
         }
+    }
 
     return foundProducts
 }
