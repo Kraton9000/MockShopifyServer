@@ -1,0 +1,22 @@
+{
+  "beanie": {
+    "price": "$5.99",
+    "inventoryCount": 4
+  },
+  "jeans": {
+    "price": "$45.99",
+    "inventoryCount": 10
+  },
+  "gameboy": {
+    "price": "26.00",
+    "inventoryCount": 1
+  },
+  "goggles": {
+    "price": "$12.01",
+    "inventoryCount": 3
+  },
+  "pencil": {
+    "price": "$1.98",
+    "inventoryCount": 99
+  }
+}
