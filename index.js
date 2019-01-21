@@ -18,6 +18,16 @@ function refreshFile(fileName) {
 	return require(fileName)
 }
 
+// -------------------------------- Helper Functions --------------------------------
+
+/**
+ * Adds a product to a list of products under a given title.
+ * Supports ensuring product is in stock with the onlyInStock flag.
+ * @param {Object} list - the list of products
+ * @param {String} title - the title of the product to be added
+ * @param {Object} product - the actual product to be added
+ * @param {Boolean} onlyInStock - whether product stock should be ensured
+ */
 function addProductToList(list, title, product, onlyInStock) {
     if (!onlyInStock || product.inventoryCount > 0) {
         list[title] = product
@@ -26,11 +36,24 @@ function addProductToList(list, title, product, onlyInStock) {
 
 }
 
+/**
+ * Updates the total price of a cart, given a number to add to it.
+ * @param {Object} cart - the cart to update
+ * @param {Number} priceToAdd - the additional price that should be added to the total; can be negative
+ */
 function updateCartTotal(cart, priceToAdd) {
     var total = parseFloat(cart.total.substring(1)) 
     cart.total = "$" + (total + priceToAdd).toFixed(2)
 }
 
+/**
+ * Returns a list of products found in DB via a given search query.
+ * substring flag can be used to indicate whether a partial or full match is necesscary.
+ * Supports ensuring product is in stock with the onlyInStock flag.
+ * @param {String} title - the query to search with
+ * @param {Boolean} substring - whether the query can be inside of a longer product name
+ * @param {Boolean} onlyInStock - whether product stock should be ensured
+ */
 function findProductByTitle(title, substring, onlyInStock) {
     var productsFile = refreshFile(productsFileName)
     var foundProducts = {}
@@ -52,6 +75,17 @@ function findProductByTitle(title, substring, onlyInStock) {
     return foundProducts
 }
 
+/**
+ * Returns a list of products found in DB via a price match.
+ * Prices are matched according to a given threshold, with the following allowed values:
+ *      - threshold 0: match products with prices equal to the query
+ *      - threshold 1: match products with prices greater than or equal to the query
+ *      - threshold 2: match products with prices less than or equal to the query
+ * Supports ensuring product is in stock with the onlyInStock flag.
+ * @param {Number} priceQuery - the price to search with
+ * @param {Number} threshold - the type of threshold to search by (see legend above)
+ * @param {Boolean} onlyInStock - whether product stock should be ensured
+ */
 function findProductByPrice(priceQuery, threshold, onlyInStock) {
     var productsFile = refreshFile(productsFileName)
     var foundProducts = {}
@@ -76,6 +110,14 @@ function findProductByPrice(priceQuery, threshold, onlyInStock) {
     return foundProducts
 }
 
+/**
+ * 'Purchases' a product from the DB by reducing its inventory count by 1.
+ * Return Values:
+ *      - returns with a value of 1 if product is not found in DB
+ *      - returns with a value of 2 if product does not have inventory left
+ *      - returns with a value of 0 if product was successfully purchased
+ * @param {String} title - the product to purchase.
+ */
 function purchaseProduct(title) {
     var productsFile = refreshFile(productsFileName)
 
@@ -89,7 +131,10 @@ function purchaseProduct(title) {
     product.inventoryCount -= 1
 
     fs.writeFileSync(productsFileName, JSON.stringify(productsFile, null, 2), defaultCallback)
+    return 0
 }
+
+// ---------------------------------- POST Routing ----------------------------------
 
 app.use(express.json())
 
@@ -133,7 +178,7 @@ app.post('/removecart', (req, res) => {
         } else {
             var removedPrice = parseFloat(cart.products[req.body.product].price.substring(1)) * -1
             updateCartTotal(cart, removedPrice)
-            
+
             delete cart.products[req.body.product]
             res.send(cart)
         }
