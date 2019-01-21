@@ -83,7 +83,7 @@ function purchaseProduct(title) {
     }
     product.inventoryCount -= 1
 
-    fs.writeFile(productsFileName, JSON.stringify(productsFile, null, 2), defaultCallback)
+    fs.writeFileSync(productsFileName, JSON.stringify(productsFile, null, 2), defaultCallback)
 }
 
 app.use(express.json())
@@ -99,66 +99,80 @@ app.post('/addcart', (req, res) => {
     var cart = req.body.cart
     if (cart == null) {
         res.sendStatus(403)
+    } else {
+        var productToAdd = findProductByTitle(req.body.title, false, true)
+        if (Object.keys(productToAdd).length < 1) {
+            res.sendStatus(404)
+        } else {
+            productToAdd = productToAdd[req.body.title]
+            cart.products[req.body.title] = productToAdd
+
+            var total = parseFloat(cart.total.substring(1)) 
+            var addedPrice = parseFloat(productToAdd.price.substring(1))
+            cart.total = "$" + (total + addedPrice).toFixed(2)
+
+            delete cart.products[req.body.title].inventoryCount
+            res.send(cart)
+        }
     }
-    var productToAdd = findProductByTitle(req.body.title, false)
-    if (Object.keys(productToAdd).length > 1) {
-        res.sendStatus(500)
-    }
-    if (Object.keys(productToAdd).length < 1) {
-        res.sendStatus(404)
-    }
-    cart.products[req.body.title] = productToAdd
-    cart.total = "$" + (parseFloat(cart.total.substring(1)) + productToAdd.price).toFixed(2)
-    res.send(cart)
 })
 
 app.post('/checkoutcart', (req, res) => {
     var cart = req.body.cart
     if (cart == null) {
         res.sendStatus(403)
-    }
-    for (var product in cart) {
-        var status = purchaseProduct(product)
-        if (status == 1) {
-            res.sendStatus(403)
+    } else {
+        for (var product in cart.products) {
+            var status = purchaseProduct(product)
+            if (status == 1) {
+                res.sendStatus(403)
+                break;
+            } else if (status == 2) {
+                res.sendStatus(404)
+                break;
+            }
         }
-        if (status == 2) {
-            res.sendStatus(404)
+        if (!res.headersSent) {
+            res.sendStatus(200)
         }
     }
-    res.sendStatus(200)
 })
 
 app.post('/querybytitle', (req, res) => {
     var title = req.body.title
     var onlyInStock = req.body.onlyInStock
     if (title == null || onlyInStock == null) {
+        console.log(req.body)
         res.sendStatus(400)
+    } else {
+        res.send(findProductByTitle(title, true, onlyInStock))
     }
-    res.send(findProductByTitle(title, true, onlyInStock))
 })
 
 app.post('/querybyprice', (req, res) => {
     var price = req.body.price
     var threshold = req.body.threshold
     var onlyInStock = req.body.onlyInStock
-    if (!price.isNumber() || threshold == null || onlyInStock == null) {
+    if (typeof(price) != 'number' || threshold == null || onlyInStock == null) {
         res.sendStatus(400)
+    } else {
+        switch(threshold) {
+            case "exact":
+                threshold = 0
+                break
+            case "above":
+                threshold = 1
+                break
+            case "below":
+                threshold = 2
+                break
+            default:
+                res.sendStatus(400)
+        }
+        if (typeof(threshold) == 'number') {
+            res.send(findProductByPrice(price, threshold, onlyInStock))
+        }
     }
-    switch(threshold) {
-        case "exact":
-            threshold = 0
-            break
-        case "above":
-            threshold = 1
-            break
-        case "below":
-            threshold = 2
-            break
-        default:
-            res.sendStatus(400)
-    }
-    res.send(findProductByPrice(price, threshold, onlyInStock))
 })
 
 app.listen(port, () => console.log(`Mock Shopify Server started on port ${port}!`))
