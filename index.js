@@ -25,7 +25,7 @@ function findProductByTitle(title, substring, onlyInStock) {
     title = title.toLowerCase()
 
     if (substring) {
-        for (var product in productsFile){
+        for (var product in productsFile) {
             if (product.includes(title)) {
                 foundProducts[product] = productsFile[product]
             }
@@ -35,6 +35,28 @@ function findProductByTitle(title, substring, onlyInStock) {
             foundProducts[title] = productsFile[title]
         }
     }
+
+    return foundProducts
+}
+
+function findProductByPrice(priceQuery, threshold, onlyInStock) {
+    var productsFile = refreshFile(productsFileName)
+    var foundProducts = {}
+
+    for (var product in productsFile) {
+        if (threshold == 0) {
+            if (productsFile[product].price == priceQuery) {
+                foundProducts[product] = productsFile[product]
+            }
+        } else if (threshold == 1) {
+            if (productsFile[product].price >= priceQuery) {
+                foundProducts[product] = productsFile[product]
+            }
+        } else if (threshold == 2) {
+            if (productsFile[product].price <= priceQuery) {
+                foundProducts[product] = productsFile[product]
+            }
+        }
 
     return foundProducts
 }
@@ -95,6 +117,38 @@ app.post('/checkoutcart', (req, res) => {
         }
     }
     res.sendStatus(200)
+})
+
+app.post('/querybytitle', (req, res) => {
+    var title = req.body.title
+    var onlyInStock = req.body.onlyInStock
+    if (title == null || onlyInStock == null) {
+        res.sendStatus(400)
+    }
+    res.send(findProductByTitle(title, true, onlyInStock))
+})
+
+app.post('/querybyprice', (req, res) => {
+    var price = req.body.price
+    var threshold = req.body.threshold
+    var onlyInStock = req.body.onlyInStock
+    if (!price.isNumber() || threshold == null || onlyInStock == null) {
+        res.sendStatus(400)
+    }
+    switch(threshold) {
+        case "exact":
+            threshold = 0
+            break
+        case "above":
+            threshold = 1
+            break
+        case "below":
+            threshold = 2
+            break
+        default:
+            res.sendStatus(400)
+    }
+    res.send(findProductByPrice(price, threshold, onlyInStock))
 })
 
 app.listen(port, () => console.log(`Mock Shopify Server started on port ${port}!`))
