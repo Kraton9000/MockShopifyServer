@@ -134,6 +134,21 @@ function purchaseProduct(title) {
     return 0
 }
 
+/**
+ * Increases the inventory count of a an existing product by 1.
+ * Used to cancel bad cart checkouts that were aborted part way.
+ * Will not take any action if product does not already exist in DB.
+ * @param {String} title - the product to restock.
+ */
+function restockProduct(title) {
+    var productsFile = refreshFile(productsFileName)
+    var product = productsFile[title]
+    if (product != null) {
+        product.inventoryCount += 1
+    }
+    fs.writeFileSync(productsFileName, JSON.stringify(productsFile, null, 2), defaultCallback)
+}
+
 // ---------------------------------- POST Routing ----------------------------------
 
 app.use(express.json())
@@ -190,6 +205,7 @@ app.post('/checkoutcart', (req, res) => {
     if (cart == null) {
         res.sendStatus(403)
     } else {
+        var productsPurchased = []
         for (var product in cart.products) {
             var status = purchaseProduct(product)
             if (status == 1) {
@@ -198,10 +214,16 @@ app.post('/checkoutcart', (req, res) => {
             } else if (status == 2) {
                 res.sendStatus(404)
                 break;
+            } else {
+                productsPurchased.push(product)
             }
         }
         if (!res.headersSent) {
             res.sendStatus(200)
+        } else {
+            for (var product in productsPurchased) {
+                restockProduct(product)
+            }
         }
     }
 })
